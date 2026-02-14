@@ -1,0 +1,133 @@
+.TH GPG-DECRYPT-VERIFY 1 "2026-02-14" "nemo-crypt 0.1.0" "User Commands"
+.SH NAME
+gpg-decrypt-verify \- decrypt OpenPGP encrypted files with signature verification
+.SH SYNOPSIS
+.B gpg-decrypt-verify.sh
+.IR file
+.SH DESCRIPTION
+.B gpg-decrypt-verify.sh
+is a Nemo file manager integration script that decrypts OpenPGP encrypted files
+and verifies digital signatures. It provides detailed signature verification
+results through desktop notifications.
+
+The script is typically invoked through Nemo's context menu when right-clicking
+on encrypted files (.gpg, .pgp, .asc), but can also be run from the command line.
+.SH OPTIONS
+The script does not accept command-line options. Configuration is handled
+automatically based on the encrypted file's metadata.
+.SH ARGUMENTS
+.TP
+.I file
+An encrypted file to decrypt. Must have one of the following extensions:
+.B .gpg, .pgp, .asc
+.SH SIGNATURE VERIFICATION
+The script automatically verifies digital signatures on encrypted files and
+displays the verification status in a desktop notification. Verification results
+include:
+.TP
+.B Valid signature
+The file was signed by a trusted key and the signature is valid.
+.TP
+.B BAD signature
+The signature is invalid, indicating the file may have been tampered with.
+.TP
+.B Expired signature
+The signature was created with a valid key but has expired.
+.TP
+.B Signature by expired key
+The key used to create the signature has expired.
+.TP
+.B Signature by revoked key
+The key used to create the signature has been revoked.
+.TP
+.B Unable to verify
+The public key needed to verify the signature is not in your keyring.
+.TP
+.B Not signed
+The file was encrypted but not signed.
+.SH OUTPUT FILE
+The decrypted file is created by removing the encryption extension:
+.IP \(bu 2
+.B file.txt.gpg
+\(-> file.txt
+.IP \(bu 2
+.B file.txt.pgp
+\(-> file.txt
+.IP \(bu 2
+.B file.txt.asc
+\(-> file.txt
+
+If the input file has no recognized extension, .decrypted is appended to avoid
+overwriting the original file.
+.SH DEPENDENCIES
+.TP
+.B gnupg
+GNU Privacy Guard for decryption operations
+.TP
+.B libnotify-bin
+Desktop notification system (notify-send)
+.SH FILES
+.TP
+.I ~/.gnupg/
+GnuPG configuration and keyring directory
+.TP
+.I ~/.local/share/nemo/actions/decrypt-gpg.nemo_action
+Nemo action file for context menu integration
+.SH ENVIRONMENT
+.TP
+.B GPG_CRYPT_DEBUG
+If set to 1, enables debug output to stderr
+.SH EXIT STATUS
+.TP
+.B 0
+Successful decryption
+.TP
+.B 1
+Error occurred (missing dependencies, decryption failure, file not found)
+.SH EXAMPLES
+.TP
+Decrypt a file (via command line):
+.B gpg-decrypt-verify.sh document.txt.gpg
+.TP
+Enable debug mode:
+.B GPG_CRYPT_DEBUG=1 gpg-decrypt-verify.sh document.txt.gpg
+.SH SECURITY
+.IP \(bu 2
+Partial decrypted files are automatically removed if decryption is interrupted
+.IP \(bu 2
+Always verify signature status before trusting decrypted content
+.IP \(bu 2
+BAD signatures indicate potential tampering \- do not trust the file
+.IP \(bu 2
+Missing keys (ERRSIG) mean signatures cannot be verified
+.SH SIGNATURE STATUS PRIORITY
+When multiple signature types are present, the worst status is displayed:
+.IP 1. 3
+BAD signature (highest priority)
+.IP 2. 3
+Revoked key signature
+.IP 3. 3
+Expired signature
+.IP 4. 3
+Expired key signature
+.IP 5. 3
+Valid signature
+.IP 6. 3
+Unable to verify (missing key)
+.IP 7. 3
+Not signed (lowest priority)
+.SH SEE ALSO
+.BR gpg (1),
+.BR gpg-encrypt (1),
+.BR nemo (1),
+.BR notify-send (1)
+.SH BUGS
+Report bugs at: https://github.com/ko4dfo/nemo-crypt/issues
+.SH AUTHOR
+Written by John Crouch.
+.SH COPYRIGHT
+Copyright \(co 2026 John Crouch.
+License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

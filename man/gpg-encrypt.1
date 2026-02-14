@@ -1,0 +1,124 @@
+.TH GPG-ENCRYPT 1 "2026-02-14" "nemo-crypt 0.1.0" "User Commands"
+.SH NAME
+gpg-encrypt \- encrypt files with OpenPGP from Nemo file manager
+.SH SYNOPSIS
+.B gpg-encrypt.sh
+.IR file ...
+.SH DESCRIPTION
+.B gpg-encrypt.sh
+is a Nemo file manager integration script that provides a graphical interface
+for encrypting files using GnuPG (GNU Privacy Guard). It supports both symmetric
+(passphrase-based) and asymmetric (public key) encryption, with optional digital
+signatures.
+
+The script is typically invoked through Nemo's context menu when right-clicking
+on files, but can also be run from the command line.
+.SH OPTIONS
+The script does not accept command-line options. All configuration is done through
+interactive GTK dialogs.
+.SH ARGUMENTS
+.TP
+.I file
+One or more files to encrypt. If multiple files are provided, the user will be
+prompted to either encrypt them separately or package them together in an archive.
+.SH ENCRYPTION MODES
+.TP
+.B Symmetric encryption
+Uses a passphrase to encrypt the file. No GPG keys are required. Anyone with the
+passphrase can decrypt the file.
+.TP
+.B Asymmetric encryption
+Encrypts the file using one or more public keys. Only the holders of the
+corresponding private keys can decrypt the file.
+.SH FEATURES
+.TP
+.B Multi-file packaging
+When encrypting multiple files, they can be packaged together in a single
+archive (.zip, .tar.gz, or .tar.bz2) before encryption.
+.TP
+.B Digital signatures
+Files can be optionally signed with your secret key during encryption,
+allowing recipients to verify authenticity.
+.TP
+.B Key selection
+Interactive dialog for selecting recipient public keys and signing keys.
+.TP
+.B Search and filter
+Built-in search functionality to find specific keys in your keyring.
+.SH DEPENDENCIES
+.TP
+.B gnupg
+GNU Privacy Guard for encryption operations
+.TP
+.B python3
+Python 3 interpreter
+.TP
+.B python3-gi
+Python GObject introspection bindings
+.TP
+.B gir1.2-gtk-3.0
+GTK 3 introspection data
+.TP
+.B zenity
+GTK dialog display tool
+.TP
+.B libnotify-bin
+Desktop notification system
+.TP
+.B zip (optional)
+For creating .zip archives
+.TP
+.B tar (optional)
+For creating .tar.gz and .tar.bz2 archives
+.SH FILES
+.TP
+.I ~/.gnupg/
+GnuPG configuration and keyring directory
+.TP
+.I ~/.local/share/nemo/actions/gpg-encrypt.nemo_action
+Nemo action file for context menu integration
+.SH ENVIRONMENT
+.TP
+.B GPG_CRYPT_DEBUG
+If set to 1, enables debug output to stderr
+.SH EXIT STATUS
+.TP
+.B 0
+Successful encryption
+.TP
+.B 1
+Error occurred (missing dependencies, user cancellation, encryption failure)
+.SH EXAMPLES
+.TP
+Encrypt a single file (via command line):
+.B gpg-encrypt.sh document.txt
+.TP
+Encrypt multiple files:
+.B gpg-encrypt.sh file1.txt file2.txt file3.txt
+.TP
+Enable debug mode:
+.B GPG_CRYPT_DEBUG=1 gpg-encrypt.sh document.txt
+.SH SECURITY
+.IP \(bu 2
+Always verify recipient public keys before encrypting sensitive data
+.IP \(bu 2
+Use strong, unique passphrases for symmetric encryption
+.IP \(bu 2
+Temporary package files are automatically cleaned up on success or cancellation
+.IP \(bu 2
+Path traversal attacks are prevented through input validation
+.SH SEE ALSO
+.BR gpg (1),
+.BR gpg-decrypt-verify (1),
+.BR nemo (1),
+.BR zenity (1)
+.SH BUGS
+Report bugs at: https://github.com/ko4dfo/nemo-crypt/issues
+.SH AUTHOR
+Written by John Crouch.
+.SH COPYRIGHT
+Copyright \(co 2026 John Crouch.
+License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
