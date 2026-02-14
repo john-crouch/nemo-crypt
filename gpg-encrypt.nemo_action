@@ -5,4 +5,5 @@ Exec=<gpg-encrypt.sh> %F
 Icon-Name=changes-prevent-symbolic
 Selection=notnone
 Extensions=any;
+Conditions=exec <gpg-encrypt-condition.sh> %F;
 Quote=double

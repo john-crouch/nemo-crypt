@@ -9,10 +9,12 @@ override_dh_auto_install:
 	install -D -m 0755 gpg-decrypt-verify.sh debian/nemo-crypt/usr/share/nemo-crypt/gpg-decrypt-verify.sh
 	install -D -m 0755 gpg-encrypt-dialog.py debian/nemo-crypt/usr/share/nemo-crypt/gpg-encrypt-dialog.py
 	install -D -m 0755 gpg-common.sh debian/nemo-crypt/usr/share/nemo-crypt/gpg-common.sh
+	install -D -m 0755 gpg-encrypt-condition.sh debian/nemo-crypt/usr/share/nemo-crypt/gpg-encrypt-condition.sh
 
 	# Install Nemo actions with proper paths
 	install -d debian/nemo-crypt/usr/share/nemo/actions
-	sed 's|<gpg-encrypt.sh>|/usr/share/nemo-crypt/gpg-encrypt.sh|g' \
+	sed -e 's|<gpg-encrypt.sh>|/usr/share/nemo-crypt/gpg-encrypt.sh|g' \
+	    -e 's|<gpg-encrypt-condition.sh>|/usr/share/nemo-crypt/gpg-encrypt-condition.sh|g' \
 		gpg-encrypt.nemo_action > debian/nemo-crypt/usr/share/nemo/actions/gpg-encrypt.nemo_action
 	sed 's|<gpg-decrypt-verify.sh>|/usr/share/nemo-crypt/gpg-decrypt-verify.sh|g' \
 		decrypt-gpg.nemo_action > debian/nemo-crypt/usr/share/nemo/actions/decrypt-gpg.nemo_action
