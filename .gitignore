@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Debian packaging
+debian/.debhelper/
+debian/files
+debian/*.substvars
+debian/*.log
+debian/tmp/
+debian/nemo-crypt/
+
+# Editor
+*.swp
+*.swo
+*~
+.*.sw?
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code (globally excluded)
+.claude/
+CLAUDE.md
+*.claude
