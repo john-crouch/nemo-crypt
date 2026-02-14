@@ -1,0 +1,8 @@
+[Nemo Action]
+Name=Encrypt...
+Comment=Encrypt file(s) with OpenPGP
+Exec=<gpg-encrypt.sh> %F
+Icon-Name=channel-secure-symbolic
+Selection=notnone
+Extensions=any;
+Quote=double
