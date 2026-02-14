@@ -15,6 +15,7 @@ debian/*.substvars
 debian/*.log
 debian/tmp/
 debian/nemo-crypt/
+debian/debhelper-build-stamp
 
 # Editor
 *.swp
@@ -27,6 +28,12 @@ debian/nemo-crypt/
 # OS
 .DS_Store
 Thumbs.db
+
+# Test files
+test-nemo-crypt/
+*.pgp
+*.gpg
+*.asc
 
 # Claude Code (globally excluded)
 .claude/
