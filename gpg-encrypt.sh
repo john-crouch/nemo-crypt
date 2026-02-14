@@ -239,8 +239,7 @@ if [ -n "$PACKAGE" ] && [ $FAILED -eq 0 ]; then
 fi
 
 # ─── Notification ────────────────────────────────────────────────────────
-# Debug: log to file
-echo "$(date): Encryption complete - SUCCEEDED=$SUCCEEDED FAILED=$FAILED" >> /tmp/nemo-crypt-debug.log
+echo "$(date): Encryption complete - SUCCEEDED=$SUCCEEDED FAILED=$FAILED" >> "$LOGFILE"
 
 if [ $FAILED -eq 0 ]; then
     if [ $SUCCEEDED -eq 1 ]; then
@@ -251,8 +250,13 @@ if [ $FAILED -eq 0 ]; then
     [ ${#SIGN_ARGS[@]} -gt 0 ] && BODY+="\nSigned: yes"
     [ "$ENC_MODE" = "symmetric" ] && BODY+="\nMethod: passphrase"
 
-    echo "$(date): Sending success notification: $BODY" >> /tmp/nemo-crypt-debug.log
-    notify-send -i dialog-password -u normal -t 5000 "Encrypted" "$BODY"
+    echo "$(date): Sending success notification: $BODY" >> "$LOGFILE"
+    if notify-send -i dialog-password -u normal -t 5000 "Encrypted" "$BODY" 2>&1 | tee -a "$LOGFILE"; then
+        echo "$(date): notify-send succeeded" >> "$LOGFILE"
+    else
+        NOTIFY_EXIT=$?
+        echo "$(date): notify-send failed with exit code: $NOTIFY_EXIT" >> "$LOGFILE"
+    fi
 else
     if [ $SUCCEEDED -gt 0 ]; then
         BODY="${SUCCEEDED} succeeded, ${FAILED} failed"
@@ -261,6 +265,13 @@ else
     fi
     BODY+="$FAIL_NAMES"
 
-    echo "$(date): Sending failure notification: $BODY" >> /tmp/nemo-crypt-debug.log
-    notify-send -i dialog-error -u normal -t 5000 "Encryption Failed" "$BODY"
+    echo "$(date): Sending failure notification: $BODY" >> "$LOGFILE"
+    if notify-send -i dialog-error -u normal -t 5000 "Encryption Failed" "$BODY" 2>&1 | tee -a "$LOGFILE"; then
+        echo "$(date): notify-send succeeded" >> "$LOGFILE"
+    else
+        NOTIFY_EXIT=$?
+        echo "$(date): notify-send failed with exit code: $NOTIFY_EXIT" >> "$LOGFILE"
+    fi
 fi
+
+echo "$(date): Script ending normally" >> "$LOGFILE"
