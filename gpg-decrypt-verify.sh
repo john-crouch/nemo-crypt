@@ -31,18 +31,23 @@ if [ -z "$FILE" ]; then
 fi
 
 FILENAME=$(basename "$FILE")
-# Remove GPG extension if present (only one, to avoid edge cases)
-OUTFILE="$FILE"
+# Determine default output filename
+DEFAULT_OUT="$FILE"
 if [[ "$FILE" == *.gpg ]]; then
-    OUTFILE="${FILE%.gpg}"
+    DEFAULT_OUT="${FILE%.gpg}"
 elif [[ "$FILE" == *.pgp ]]; then
-    OUTFILE="${FILE%.pgp}"
+    DEFAULT_OUT="${FILE%.pgp}"
 elif [[ "$FILE" == *.asc ]]; then
-    OUTFILE="${FILE%.asc}"
+    DEFAULT_OUT="${FILE%.asc}"
 else
     # No recognized extension - add .decrypted to avoid overwriting
-    OUTFILE="${FILE}.decrypted"
+    DEFAULT_OUT="${FILE}.decrypted"
 fi
+
+# Prompt user for save location
+OUTFILE=$(zenity --file-selection --save --confirm-overwrite \
+    --title="Choose Decrypted File Name for '$(basename "$FILE")'" \
+    --filename="$DEFAULT_OUT") || exit 0
 
 # Cleanup function for partial decryption on interrupt
 DECRYPTION_STARTED=false
