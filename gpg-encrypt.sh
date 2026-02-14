@@ -212,18 +212,25 @@ for i in "${!FILES[@]}"; do
 
     if [ "$ENC_MODE" = "symmetric" ]; then
         GPG_CMD+=(--symmetric "${SIGN_ARGS[@]}")
+        echo "$(date): Mode: symmetric encryption" >> "$LOGFILE"
     else
         GPG_CMD+=(--encrypt "${RCPT_ARGS[@]}" "${SIGN_ARGS[@]}")
+        echo "$(date): Mode: public key encryption" >> "$LOGFILE"
     fi
 
+    echo "$(date): Running GPG command..." >> "$LOGFILE"
     if ERROR=$("${GPG_CMD[@]}" "$FILE" 2>&1); then
+        echo "$(date): GPG succeeded" >> "$LOGFILE"
         ((SUCCEEDED++))
     else
+        echo "$(date): GPG failed: ${ERROR:0:100}" >> "$LOGFILE"
         ((FAILED++))
         FAIL_NAMES+="\n$(basename "$FILE"): ${ERROR:0:100}"
         rm -f "$OUTFILE"
     fi
 done
+
+echo "$(date): Encryption loop completed" >> "$LOGFILE"
 
 # Clean up temporary package after successful encryption (or keep on failure for inspection)
 if [ -n "$PACKAGE" ] && [ $FAILED -eq 0 ]; then
