@@ -19,7 +19,7 @@ Depends: ${misc:Depends},
          zenity,
          libnotify-bin,
          nemo
-Recommends: zip, tar
+Recommends: zip
 Description: GPG encryption integration for Nemo file manager
  nemo-crypt provides seamless GPG encryption and decryption functionality
  directly in the Nemo file manager through context menu actions.
