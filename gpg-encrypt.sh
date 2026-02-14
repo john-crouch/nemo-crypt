@@ -221,13 +221,16 @@ for i in "${!FILES[@]}"; do
     echo "$(date): Running GPG command..." >> "$LOGFILE"
     if ERROR=$("${GPG_CMD[@]}" "$FILE" 2>&1); then
         echo "$(date): GPG succeeded" >> "$LOGFILE"
-        ((SUCCEEDED++))
+        ((SUCCEEDED++)) || true
+        echo "$(date): SUCCEEDED counter now: $SUCCEEDED" >> "$LOGFILE"
     else
         echo "$(date): GPG failed: ${ERROR:0:100}" >> "$LOGFILE"
-        ((FAILED++))
+        ((FAILED++)) || true
+        echo "$(date): FAILED counter now: $FAILED" >> "$LOGFILE"
         FAIL_NAMES+="\n$(basename "$FILE"): ${ERROR:0:100}"
         rm -f "$OUTFILE"
     fi
+    echo "$(date): Iteration $i complete" >> "$LOGFILE"
 done
 
 echo "$(date): Encryption loop completed" >> "$LOGFILE"
