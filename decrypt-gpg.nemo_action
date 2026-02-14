@@ -2,7 +2,7 @@
 Name=Decrypt File
 Comment=Decrypt an OpenPGP encrypted file
 Exec=<gpg-decrypt-verify.sh> %F
-Icon-Name=dialog-password
+Icon-Name=changes-allow-symbolic
 Selection=s
 Extensions=gpg;pgp;asc;
 Mimetypes=application/pgp-encrypted;application/pgp;

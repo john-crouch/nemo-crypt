@@ -2,7 +2,7 @@
 Name=Encrypt...
 Comment=Encrypt file(s) with OpenPGP
 Exec=<gpg-encrypt.sh> %F
-Icon-Name=dialog-password
+Icon-Name=changes-prevent-symbolic
 Selection=notnone
 Extensions=any;
 Quote=double
