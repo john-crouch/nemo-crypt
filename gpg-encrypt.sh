@@ -146,7 +146,7 @@ OUTFILES=()
 
 if [ ${#FILES[@]} -eq 1 ]; then
     # Single file: save-as dialog
-    DEFAULT_OUT="${FILES[0]}.pgp"
+    DEFAULT_OUT="${FILES[0]}.gpg"
     OUTFILE=$(zenity --file-selection --save --confirm-overwrite \
         --title="Choose Encrypted File Name for '$(basename "${FILES[0]}")'" \
         --filename="$DEFAULT_OUT" \
@@ -162,7 +162,7 @@ else
         --filename="$DEFAULT_DIR/" \
         --window-icon=dialog-password) || exit 0
     for FILE in "${FILES[@]}"; do
-        OUTFILES+=("${OUTDIR}/$(basename "$FILE").pgp")
+        OUTFILES+=("${OUTDIR}/$(basename "$FILE").gpg")
     done
 
     # Check for existing files and confirm overwrite
