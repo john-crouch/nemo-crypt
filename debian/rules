@@ -1,0 +1,25 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	# Install scripts
+	install -D -m 0755 gpg-encrypt.sh debian/nemo-crypt/usr/share/nemo-crypt/gpg-encrypt.sh
+	install -D -m 0755 gpg-decrypt-verify.sh debian/nemo-crypt/usr/share/nemo-crypt/gpg-decrypt-verify.sh
+	install -D -m 0755 gpg-encrypt-dialog.py debian/nemo-crypt/usr/share/nemo-crypt/gpg-encrypt-dialog.py
+	install -D -m 0644 gpg-common.sh debian/nemo-crypt/usr/share/nemo-crypt/gpg-common.sh
+
+	# Install Nemo actions with proper paths
+	install -d debian/nemo-crypt/usr/share/nemo/actions
+	sed 's|<gpg-encrypt.sh>|/usr/share/nemo-crypt/gpg-encrypt.sh|g' \
+		gpg-encrypt.nemo_action > debian/nemo-crypt/usr/share/nemo/actions/gpg-encrypt.nemo_action
+	sed 's|<gpg-decrypt-verify.sh>|/usr/share/nemo-crypt/gpg-decrypt-verify.sh|g' \
+		decrypt-gpg.nemo_action > debian/nemo-crypt/usr/share/nemo/actions/decrypt-gpg.nemo_action
+
+	# Install man pages
+	install -D -m 0644 man/gpg-encrypt.1 debian/nemo-crypt/usr/share/man/man1/gpg-encrypt.1
+	install -D -m 0644 man/gpg-decrypt-verify.1 debian/nemo-crypt/usr/share/man/man1/gpg-decrypt-verify.1
+
+	# Install documentation
+	install -D -m 0644 README.md debian/nemo-crypt/usr/share/doc/nemo-crypt/README.md

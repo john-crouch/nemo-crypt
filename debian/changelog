@@ -1,0 +1,12 @@
+nemo-crypt (0.1.0-1) unstable; urgency=medium
+
+  * Initial release
+  * GPG encryption/decryption integration for Nemo file manager
+  * Support for symmetric and asymmetric encryption
+  * Digital signature verification
+  * Multi-file packaging support (zip, tar.gz, tar.bz2)
+  * GTK3 encryption settings dialog
+  * Comprehensive error handling and validation
+  * Security improvements: path traversal protection, cleanup traps
+
+ -- John Crouch <github@ko4dfo.com>  Fri, 14 Feb 2026 00:00:00 +0000

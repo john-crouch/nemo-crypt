@@ -1,0 +1,35 @@
+Source: nemo-crypt
+Section: utils
+Priority: optional
+Maintainer: John Crouch <github@ko4dfo.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.0
+Homepage: https://github.com/ko4dfo/nemo-crypt
+Vcs-Browser: https://github.com/ko4dfo/nemo-crypt
+Vcs-Git: https://github.com/ko4dfo/nemo-crypt.git
+Rules-Requires-Root: no
+
+Package: nemo-crypt
+Architecture: all
+Depends: ${misc:Depends},
+         gnupg (>= 2.0),
+         python3 (>= 3.6),
+         python3-gi,
+         gir1.2-gtk-3.0,
+         zenity,
+         libnotify-bin,
+         nemo
+Recommends: zip, tar
+Description: GPG encryption integration for Nemo file manager
+ nemo-crypt provides seamless GPG encryption and decryption functionality
+ directly in the Nemo file manager through context menu actions.
+ .
+ Features:
+  * Right-click encryption from Nemo's context menu
+  * Symmetric (passphrase) and asymmetric (public key) encryption
+  * Digital signature support and verification
+  * Multi-file encryption with packaging options
+  * GTK3 native encryption settings dialog
+  * Archive support (.zip, .tar.gz, .tar.bz2)
+  * Comprehensive signature verification with detailed status
+  * Security hardening and error handling
