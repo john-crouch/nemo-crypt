@@ -220,7 +220,7 @@ if [ $FAILED -eq 0 ]; then
     fi
     [ ${#SIGN_ARGS[@]} -gt 0 ] && BODY+="\nSigned: yes"
     [ "$ENC_MODE" = "symmetric" ] && BODY+="\nMethod: passphrase"
-    notify-send -i security-high "Encrypted" "$BODY"
+    notify-send -i dialog-password -t 5000 "Encrypted" "$BODY"
 else
     if [ $SUCCEEDED -gt 0 ]; then
         BODY="${SUCCEEDED} succeeded, ${FAILED} failed"
@@ -228,5 +228,8 @@ else
         BODY="${FAILED} file(s) failed"
     fi
     BODY+="$FAIL_NAMES"
-    notify-send -i dialog-error "Encryption Failed" "$BODY"
+    notify-send -i dialog-error -t 5000 "Encryption Failed" "$BODY"
 fi
+
+# Give notification daemon time to receive the message
+sleep 0.2
