@@ -150,7 +150,9 @@ if [ ${#FILES[@]} -eq 1 ]; then
     OUTFILE=$(zenity --file-selection --save --confirm-overwrite \
         --title="Choose Encrypted File Name for '$(basename "${FILES[0]}")'" \
         --filename="$DEFAULT_OUT" \
-        --window-icon=dialog-password) || exit 0
+        --window-icon=dialog-password \
+        --file-filter='GPG Files | *.gpg *.pgp *.asc' \
+        --file-filter='All Files | *') || exit 0
     OUTFILES=("$OUTFILE")
 else
     # Multiple files: choose output directory
