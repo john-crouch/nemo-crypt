@@ -47,7 +47,8 @@ fi
 # Prompt user for save location
 OUTFILE=$(zenity --file-selection --save --confirm-overwrite \
     --title="Choose Decrypted File Name for '$(basename "$FILE")'" \
-    --filename="$DEFAULT_OUT") || exit 0
+    --filename="$DEFAULT_OUT" \
+    --window-icon=dialog-password) || exit 0
 
 # Cleanup function for partial decryption on interrupt
 DECRYPTION_STARTED=false

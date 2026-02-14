@@ -149,14 +149,16 @@ if [ ${#FILES[@]} -eq 1 ]; then
     DEFAULT_OUT="${FILES[0]}.pgp"
     OUTFILE=$(zenity --file-selection --save --confirm-overwrite \
         --title="Choose Encrypted File Name for '$(basename "${FILES[0]}")'" \
-        --filename="$DEFAULT_OUT") || exit 0
+        --filename="$DEFAULT_OUT" \
+        --window-icon=dialog-password) || exit 0
     OUTFILES=("$OUTFILE")
 else
     # Multiple files: choose output directory
     DEFAULT_DIR=$(dirname "${FILES[0]}")
     OUTDIR=$(zenity --file-selection --directory \
         --title="Choose Output Directory for Encrypted Files" \
-        --filename="$DEFAULT_DIR/") || exit 0
+        --filename="$DEFAULT_DIR/" \
+        --window-icon=dialog-password) || exit 0
     for FILE in "${FILES[@]}"; do
         OUTFILES+=("${OUTDIR}/$(basename "$FILE").pgp")
     done
