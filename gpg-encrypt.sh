@@ -188,6 +188,13 @@ for i in "${!FILES[@]}"; do
     FILE="${FILES[$i]}"
     OUTFILE="${OUTFILES[$i]}"
 
+    # Skip files that are already GPG encrypted (check file header)
+    if file -b "$FILE" | grep -qi "gpg\|pgp\|openpgp"; then
+        ((FAILED++))
+        FAIL_NAMES+="\n$(basename "$FILE"): Already encrypted"
+        continue
+    fi
+
     GPG_CMD=(gpg --yes --output "$OUTFILE")
 
     if [ "$ENC_MODE" = "symmetric" ]; then
@@ -220,7 +227,7 @@ if [ $FAILED -eq 0 ]; then
     fi
     [ ${#SIGN_ARGS[@]} -gt 0 ] && BODY+="\nSigned: yes"
     [ "$ENC_MODE" = "symmetric" ] && BODY+="\nMethod: passphrase"
-    notify-send -i dialog-password -t 5000 "Encrypted" "$BODY"
+    notify-send -i dialog-password -u normal -t 5000 "Encrypted" "$BODY" &
 else
     if [ $SUCCEEDED -gt 0 ]; then
         BODY="${SUCCEEDED} succeeded, ${FAILED} failed"
@@ -228,8 +235,8 @@ else
         BODY="${FAILED} file(s) failed"
     fi
     BODY+="$FAIL_NAMES"
-    notify-send -i dialog-error -t 5000 "Encryption Failed" "$BODY"
+    notify-send -i dialog-error -u normal -t 5000 "Encryption Failed" "$BODY" &
 fi
 
-# Give notification daemon time to receive the message
-sleep 0.2
+# Wait for notification to be sent
+wait
