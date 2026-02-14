@@ -226,21 +226,41 @@ fi
 
 # ─── Notification ────────────────────────────────────────────────────────
 if [ $FAILED -eq 0 ]; then
+    # Build notification title and body to match decrypt format
     if [ $SUCCEEDED -eq 1 ]; then
+        TITLE="Encrypted: $(basename "${FILES[0]}")"
         BODY="Output: $(basename "${OUTFILES[0]}")"
     else
+        TITLE="Encrypted: ${SUCCEEDED} files"
         BODY="${SUCCEEDED} files encrypted"
     fi
-    [ ${#SIGN_ARGS[@]} -gt 0 ] && BODY+="\nSigned: yes"
-    [ "$ENC_MODE" = "symmetric" ] && BODY+="\nMethod: passphrase"
-    notify-send -i dialog-password -u normal -t 5000 "Encrypted" "$BODY"
+
+    # Add encryption details
+    if [ "$ENC_MODE" = "symmetric" ]; then
+        BODY+="\nMethod: Passphrase"
+    else
+        BODY+="\nMethod: Public key"
+    fi
+
+    if [ ${#SIGN_ARGS[@]} -gt 0 ]; then
+        BODY+="\nSigned: Yes"
+    fi
+
+    notify-send -i dialog-password -u normal -t 5000 "$TITLE" "$BODY"
 else
+    if [ $SUCCEEDED -eq 1 ]; then
+        TITLE="Encryption Failed: $(basename "${FILES[0]}")"
+    else
+        TITLE="Encryption Failed: ${FAILED} file(s)"
+    fi
+
     if [ $SUCCEEDED -gt 0 ]; then
         BODY="${SUCCEEDED} succeeded, ${FAILED} failed"
     else
         BODY="${FAILED} file(s) failed"
     fi
     BODY+="$FAIL_NAMES"
-    notify-send -i dialog-error -u normal -t 5000 "Encryption Failed" "$BODY"
+
+    notify-send -i dialog-error -u normal -t 5000 "$TITLE" "$BODY"
 fi
 
