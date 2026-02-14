@@ -19,11 +19,18 @@ set -euo pipefail
 # GPG Encrypt — drop-in replacement for nemo-seahorse encrypt
 # Uses gpg-encrypt-dialog.py for the native-style GTK3 settings dialog
 
+# Debug logging
+LOGFILE="/tmp/nemo-crypt-debug.log"
+echo "$(date): === ENCRYPT SCRIPT STARTED ===" >> "$LOGFILE"
+echo "$(date): Arguments: $*" >> "$LOGFILE"
+
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 source "${SCRIPT_DIR}/gpg-common.sh"
 
 check_dependencies gpg zenity notify-send python3
 FILES=("$@")
+
+echo "$(date): Dependencies checked, FILES count: ${#FILES[@]}" >> "$LOGFILE"
 
 if [ ${#FILES[@]} -eq 0 ]; then
     notify-send -i dialog-error "Encrypt" "No files specified."
@@ -110,8 +117,12 @@ if [ ${#FILES[@]} -gt 1 ]; then
 fi
 
 # ─── Encryption settings dialog ─────────────────────────────────────────
+echo "$(date): Launching encryption dialog..." >> "$LOGFILE"
 DIALOG_OUTPUT=$(python3 "${SCRIPT_DIR}/gpg-encrypt-dialog.py")
-if [ $? -ne 0 ]; then
+DIALOG_EXIT=$?
+echo "$(date): Dialog exited with code: $DIALOG_EXIT" >> "$LOGFILE"
+if [ $DIALOG_EXIT -ne 0 ]; then
+    echo "$(date): User cancelled dialog" >> "$LOGFILE"
     exit 0
 fi
 
@@ -180,6 +191,7 @@ else
 fi
 
 # ─── Encrypt ─────────────────────────────────────────────────────────────
+echo "$(date): Starting encryption of ${#FILES[@]} file(s)" >> "$LOGFILE"
 SUCCEEDED=0
 FAILED=0
 FAIL_NAMES=""
@@ -187,6 +199,7 @@ FAIL_NAMES=""
 for i in "${!FILES[@]}"; do
     FILE="${FILES[$i]}"
     OUTFILE="${OUTFILES[$i]}"
+    echo "$(date): Encrypting: $FILE -> $OUTFILE" >> "$LOGFILE"
 
     # Skip files that are already GPG encrypted (check file header)
     if file -b "$FILE" | grep -qi "gpg\|pgp\|openpgp"; then
