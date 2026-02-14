@@ -81,6 +81,7 @@ class EncryptDialog(Gtk.Dialog):
         )
         self.set_default_size(520, 400)
         self.set_resizable(True)
+        self.set_icon_name("dialog-password")
         self.add_button("Cancel", Gtk.ResponseType.CANCEL)
         ok_btn = self.add_button("OK", Gtk.ResponseType.OK)
         ok_btn.get_style_context().add_class("suggested-action")

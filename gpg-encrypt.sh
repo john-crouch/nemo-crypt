@@ -19,18 +19,11 @@ set -euo pipefail
 # GPG Encrypt — drop-in replacement for nemo-seahorse encrypt
 # Uses gpg-encrypt-dialog.py for the native-style GTK3 settings dialog
 
-# Debug logging
-LOGFILE="/tmp/nemo-crypt-debug.log"
-echo "$(date): === ENCRYPT SCRIPT STARTED ===" >> "$LOGFILE"
-echo "$(date): Arguments: $*" >> "$LOGFILE"
-
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 source "${SCRIPT_DIR}/gpg-common.sh"
 
 check_dependencies gpg zenity notify-send python3
 FILES=("$@")
-
-echo "$(date): Dependencies checked, FILES count: ${#FILES[@]}" >> "$LOGFILE"
 
 if [ ${#FILES[@]} -eq 0 ]; then
     notify-send -i dialog-error "Encrypt" "No files specified."
@@ -117,12 +110,9 @@ if [ ${#FILES[@]} -gt 1 ]; then
 fi
 
 # ─── Encryption settings dialog ─────────────────────────────────────────
-echo "$(date): Launching encryption dialog..." >> "$LOGFILE"
 DIALOG_OUTPUT=$(python3 "${SCRIPT_DIR}/gpg-encrypt-dialog.py")
 DIALOG_EXIT=$?
-echo "$(date): Dialog exited with code: $DIALOG_EXIT" >> "$LOGFILE"
 if [ $DIALOG_EXIT -ne 0 ]; then
-    echo "$(date): User cancelled dialog" >> "$LOGFILE"
     exit 0
 fi
 
@@ -191,7 +181,6 @@ else
 fi
 
 # ─── Encrypt ─────────────────────────────────────────────────────────────
-echo "$(date): Starting encryption of ${#FILES[@]} file(s)" >> "$LOGFILE"
 SUCCEEDED=0
 FAILED=0
 FAIL_NAMES=""
@@ -199,7 +188,6 @@ FAIL_NAMES=""
 for i in "${!FILES[@]}"; do
     FILE="${FILES[$i]}"
     OUTFILE="${OUTFILES[$i]}"
-    echo "$(date): Encrypting: $FILE -> $OUTFILE" >> "$LOGFILE"
 
     # Skip files that are already GPG encrypted (check file header)
     if file -b "$FILE" | grep -qi "gpg\|pgp\|openpgp"; then
@@ -212,28 +200,19 @@ for i in "${!FILES[@]}"; do
 
     if [ "$ENC_MODE" = "symmetric" ]; then
         GPG_CMD+=(--symmetric "${SIGN_ARGS[@]}")
-        echo "$(date): Mode: symmetric encryption" >> "$LOGFILE"
     else
         GPG_CMD+=(--encrypt "${RCPT_ARGS[@]}" "${SIGN_ARGS[@]}")
-        echo "$(date): Mode: public key encryption" >> "$LOGFILE"
     fi
 
-    echo "$(date): Running GPG command..." >> "$LOGFILE"
     if ERROR=$("${GPG_CMD[@]}" "$FILE" 2>&1); then
-        echo "$(date): GPG succeeded" >> "$LOGFILE"
         ((SUCCEEDED++)) || true
-        echo "$(date): SUCCEEDED counter now: $SUCCEEDED" >> "$LOGFILE"
     else
-        echo "$(date): GPG failed: ${ERROR:0:100}" >> "$LOGFILE"
         ((FAILED++)) || true
-        echo "$(date): FAILED counter now: $FAILED" >> "$LOGFILE"
         FAIL_NAMES+="\n$(basename "$FILE"): ${ERROR:0:100}"
         rm -f "$OUTFILE"
     fi
-    echo "$(date): Iteration $i complete" >> "$LOGFILE"
 done
 
-echo "$(date): Encryption loop completed" >> "$LOGFILE"
 
 # Clean up temporary package after successful encryption (or keep on failure for inspection)
 if [ -n "$PACKAGE" ] && [ $FAILED -eq 0 ]; then
@@ -242,8 +221,6 @@ if [ -n "$PACKAGE" ] && [ $FAILED -eq 0 ]; then
 fi
 
 # ─── Notification ────────────────────────────────────────────────────────
-echo "$(date): Encryption complete - SUCCEEDED=$SUCCEEDED FAILED=$FAILED" >> "$LOGFILE"
-
 if [ $FAILED -eq 0 ]; then
     if [ $SUCCEEDED -eq 1 ]; then
         BODY="Output: $(basename "${OUTFILES[0]}")"
@@ -252,14 +229,7 @@ if [ $FAILED -eq 0 ]; then
     fi
     [ ${#SIGN_ARGS[@]} -gt 0 ] && BODY+="\nSigned: yes"
     [ "$ENC_MODE" = "symmetric" ] && BODY+="\nMethod: passphrase"
-
-    echo "$(date): Sending success notification: $BODY" >> "$LOGFILE"
-    if notify-send -i dialog-password -u normal -t 5000 "Encrypted" "$BODY" 2>&1 | tee -a "$LOGFILE"; then
-        echo "$(date): notify-send succeeded" >> "$LOGFILE"
-    else
-        NOTIFY_EXIT=$?
-        echo "$(date): notify-send failed with exit code: $NOTIFY_EXIT" >> "$LOGFILE"
-    fi
+    notify-send -i dialog-password -u normal -t 5000 "Encrypted" "$BODY"
 else
     if [ $SUCCEEDED -gt 0 ]; then
         BODY="${SUCCEEDED} succeeded, ${FAILED} failed"
@@ -267,14 +237,6 @@ else
         BODY="${FAILED} file(s) failed"
     fi
     BODY+="$FAIL_NAMES"
-
-    echo "$(date): Sending failure notification: $BODY" >> "$LOGFILE"
-    if notify-send -i dialog-error -u normal -t 5000 "Encryption Failed" "$BODY" 2>&1 | tee -a "$LOGFILE"; then
-        echo "$(date): notify-send succeeded" >> "$LOGFILE"
-    else
-        NOTIFY_EXIT=$?
-        echo "$(date): notify-send failed with exit code: $NOTIFY_EXIT" >> "$LOGFILE"
-    fi
+    notify-send -i dialog-error -u normal -t 5000 "Encryption Failed" "$BODY"
 fi
 
-echo "$(date): Script ending normally" >> "$LOGFILE"
