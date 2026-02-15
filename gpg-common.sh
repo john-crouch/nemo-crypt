@@ -17,6 +17,44 @@
 
 # Shared utilities for nemo-crypt GPG scripts
 
+# ─── Debug and Logging ──────────────────────────────────────────────────
+
+# Enable debug mode with: export NEMO_CRYPT_DEBUG=1
+NEMO_CRYPT_DEBUG="${NEMO_CRYPT_DEBUG:-0}"
+NEMO_CRYPT_LOG_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/nemo-crypt/debug.log"
+
+# Initialize logging if debug mode is enabled
+if [ "$NEMO_CRYPT_DEBUG" = "1" ]; then
+    mkdir -p "$(dirname "$NEMO_CRYPT_LOG_FILE")"
+    echo "=== nemo-crypt debug session started at $(date) ===" >> "$NEMO_CRYPT_LOG_FILE"
+    echo "Script: $0" >> "$NEMO_CRYPT_LOG_FILE"
+    echo "Arguments: $*" >> "$NEMO_CRYPT_LOG_FILE"
+    echo "Working directory: $(pwd)" >> "$NEMO_CRYPT_LOG_FILE"
+    echo "" >> "$NEMO_CRYPT_LOG_FILE"
+fi
+
+log_debug() {
+    if [ "$NEMO_CRYPT_DEBUG" = "1" ]; then
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] DEBUG: $*" >> "$NEMO_CRYPT_LOG_FILE"
+    fi
+}
+
+log_error() {
+    local msg="$*"
+    if [ "$NEMO_CRYPT_DEBUG" = "1" ]; then
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $msg" >> "$NEMO_CRYPT_LOG_FILE"
+    fi
+    echo "ERROR: $msg" >&2
+}
+
+log_info() {
+    if [ "$NEMO_CRYPT_DEBUG" = "1" ]; then
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] INFO: $*" >> "$NEMO_CRYPT_LOG_FILE"
+    fi
+}
+
+# ─── Dependency Checking ────────────────────────────────────────────────
+
 check_dependencies() {
     local missing=()
     for cmd in "$@"; do

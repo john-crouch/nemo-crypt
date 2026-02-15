@@ -25,7 +25,11 @@ check_dependencies gpg notify-send
 
 FILE="$1"
 
+log_info "Starting decryption process"
+log_debug "Input file: $FILE"
+
 if [ -z "$FILE" ]; then
+    log_error "No file specified"
     notify-send -i dialog-error "Decrypt File" "No file specified."
     exit 1
 fi
@@ -64,14 +68,23 @@ trap cleanup EXIT INT TERM
 # Mark that decryption is starting
 DECRYPTION_STARTED=true
 
+log_debug "Output file: $OUTFILE"
+log_info "Executing GPG decryption"
+
 # Decrypt and capture status output (using fd 3 to separate status from stderr)
 STATUS=$(gpg --batch --yes --status-fd 3 --decrypt --output "$OUTFILE" "$FILE" 2>&1 3>&1 1>&2)
 GPG_EXIT=$?
 
+log_debug "GPG exit code: $GPG_EXIT"
+log_debug "GPG status output: $STATUS"
+
 if [ $GPG_EXIT -ne 0 ]; then
+    log_error "Decryption failed with exit code $GPG_EXIT"
     notify-send -i dialog-error "Decryption Failed" "Failed to decrypt ${FILENAME}"
     exit 1
 fi
+
+log_info "Decryption successful"
 
 # Decryption successful - don't clean up the output file
 DECRYPTION_STARTED=false
@@ -89,35 +102,44 @@ extract_keyid() {
 }
 
 # Parse signature status (priority: bad > revoked > expired > good > error > none)
+log_debug "Parsing signature verification status"
+
 if grep -q "BADSIG" <<< "$STATUS"; then
     SIG_STATUS="BAD signature"
     SIGNER=$(extract_signer "BADSIG")
     SIG_ICON="security-low"
+    log_info "Signature verification: BAD signature from $SIGNER"
 elif grep -q "REVKEYSIG" <<< "$STATUS"; then
     SIG_STATUS="Signature by revoked key"
     SIGNER=$(extract_signer "REVKEYSIG")
     SIG_ICON="security-low"
+    log_info "Signature verification: Revoked key - $SIGNER"
 elif grep -q "EXPSIG" <<< "$STATUS"; then
     SIG_STATUS="Expired signature"
     SIGNER=$(extract_signer "EXPSIG")
     SIG_ICON="security-medium"
+    log_info "Signature verification: Expired signature from $SIGNER"
 elif grep -q "EXPKEYSIG" <<< "$STATUS"; then
     SIG_STATUS="Signature by expired key"
     SIGNER=$(extract_signer "EXPKEYSIG")
     SIG_ICON="security-medium"
+    log_info "Signature verification: Expired key - $SIGNER"
 elif grep -q "GOODSIG" <<< "$STATUS"; then
     SIG_STATUS="Valid signature"
     SIGNER=$(extract_signer "GOODSIG")
     SIG_ICON="security-high"
+    log_info "Signature verification: GOOD signature from $SIGNER"
 elif grep -q "ERRSIG" <<< "$STATUS"; then
     KEYID=$(extract_keyid "ERRSIG")
     SIG_STATUS="Unable to verify (key $KEYID not found)"
     SIGNER="Unknown"
     SIG_ICON="security-medium"
+    log_info "Signature verification: Unable to verify - key $KEYID not found"
 else
     SIG_STATUS="Not signed"
     SIGNER=""
     SIG_ICON="dialog-information"
+    log_info "File was not signed"
 fi
 
 # Parse timestamp if present

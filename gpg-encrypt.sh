@@ -25,7 +25,12 @@ source "${SCRIPT_DIR}/gpg-common.sh"
 check_dependencies gpg zenity notify-send python3
 FILES=("$@")
 
+log_info "Starting encryption process"
+log_debug "Number of files: ${#FILES[@]}"
+log_debug "Files: ${FILES[*]}"
+
 if [ ${#FILES[@]} -eq 0 ]; then
+    log_error "No files specified"
     notify-send -i dialog-error "Encrypt" "No files specified."
     exit 1
 fi
@@ -42,6 +47,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 if [ ${#FILES[@]} -gt 1 ]; then
+    log_debug "Multiple files selected, showing packaging dialog"
     CHOICE=$(zenity --list --radiolist \
         --title="Encrypt Multiple Files" \
         --text="<b>You have selected multiple files</b>\n\nPackaging:" \
@@ -50,7 +56,9 @@ if [ ${#FILES[@]} -gt 1 ]; then
         FALSE "Encrypt packed together in a package" \
         --width=420 --height=220) || exit 0
 
+    log_debug "User choice: $CHOICE"
     if [ "$CHOICE" = "Encrypt packed together in a package" ]; then
+        log_info "Creating package from ${#FILES[@]} files"
         PKG_NAME=$(zenity --entry \
             --title="Package Name" \
             --text="Package name:" \
@@ -110,14 +118,21 @@ if [ ${#FILES[@]} -gt 1 ]; then
 fi
 
 # ─── Encryption settings dialog ─────────────────────────────────────────
+log_debug "Launching encryption settings dialog"
 DIALOG_OUTPUT=$(python3 "${SCRIPT_DIR}/gpg-encrypt-dialog.py")
 DIALOG_EXIT=$?
+log_debug "Dialog exit code: $DIALOG_EXIT"
+
 if [ $DIALOG_EXIT -ne 0 ]; then
+    log_info "User cancelled encryption dialog"
     exit 0
 fi
 
+log_debug "Dialog output: $DIALOG_OUTPUT"
+
 # Validate dialog output format
 if [[ ! "$DIALOG_OUTPUT" =~ ^MODE= ]] || [[ ! "$DIALOG_OUTPUT" =~ RECIPIENTS= ]] || [[ ! "$DIALOG_OUTPUT" =~ SIGNER= ]]; then
+    log_error "Dialog returned invalid output format"
     notify-send -i dialog-error "Encrypt" "Encryption dialog returned invalid data.\n\nPlease try again."
     exit 1
 fi
@@ -125,6 +140,10 @@ fi
 ENC_MODE=$(echo "$DIALOG_OUTPUT" | grep '^MODE=' | cut -d= -f2)
 RECIPIENTS=$(echo "$DIALOG_OUTPUT" | grep '^RECIPIENTS=' | cut -d= -f2)
 SIGNER=$(echo "$DIALOG_OUTPUT" | grep '^SIGNER=' | cut -d= -f2)
+
+log_info "Encryption mode: $ENC_MODE"
+log_debug "Recipients: $RECIPIENTS"
+log_debug "Signer: $SIGNER"
 
 # Build recipient args
 RCPT_ARGS=()
@@ -189,12 +208,17 @@ SUCCEEDED=0
 FAILED=0
 FAIL_NAMES=""
 
+log_info "Starting encryption of ${#FILES[@]} file(s)"
+
 for i in "${!FILES[@]}"; do
     FILE="${FILES[$i]}"
     OUTFILE="${OUTFILES[$i]}"
 
+    log_debug "Processing file: $FILE -> $OUTFILE"
+
     # Skip files that are already GPG encrypted (check file header)
     if file -b "$FILE" | grep -qi "gpg\|pgp\|openpgp"; then
+        log_info "Skipping already encrypted file: $FILE"
         ((FAILED++))
         FAIL_NAMES+="\n$(basename "$FILE"): Already encrypted"
         continue
@@ -208,14 +232,20 @@ for i in "${!FILES[@]}"; do
         GPG_CMD+=(--encrypt "${RCPT_ARGS[@]}" "${SIGN_ARGS[@]}")
     fi
 
+    log_debug "GPG command: ${GPG_CMD[*]} $FILE"
+
     if ERROR=$("${GPG_CMD[@]}" "$FILE" 2>&1); then
+        log_info "Successfully encrypted: $(basename "$FILE")"
         ((SUCCEEDED++)) || true
     else
+        log_error "Failed to encrypt $(basename "$FILE"): $ERROR"
         ((FAILED++)) || true
         FAIL_NAMES+="\n$(basename "$FILE"): ${ERROR:0:100}"
         rm -f "$OUTFILE"
     fi
 done
+
+log_info "Encryption complete: $SUCCEEDED succeeded, $FAILED failed"
 
 
 # Clean up temporary package after successful encryption (or keep on failure for inspection)
