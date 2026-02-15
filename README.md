@@ -1,5 +1,12 @@
 # nemo-crypt
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Release](https://img.shields.io/github/v/release/john-crouch/nemo-crypt)](https://github.com/john-crouch/nemo-crypt/releases)
+[![Linux](https://img.shields.io/badge/Platform-Linux-blue.svg)](https://www.linux.org/)
+[![Bash](https://img.shields.io/badge/Shell-Bash-4EAA25?logo=gnu-bash&logoColor=white)](https://www.gnu.org/software/bash/)
+[![Python](https://img.shields.io/badge/Python-3.6+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![GPG](https://img.shields.io/badge/Encryption-GPG-0093DD?logo=gnu-privacy-guard&logoColor=white)](https://gnupg.org/)
+
 GPG encryption and decryption integration for the Nemo file manager, providing seamless right-click context menu actions for encrypting and decrypting files with OpenPGP.
 
 ## Features
