@@ -69,19 +69,130 @@ trap cleanup EXIT INT TERM
 DECRYPTION_STARTED=true
 
 log_debug "Output file: $OUTFILE"
+
+# Check if file uses anonymous recipient (throw-keyids)
+log_debug "Checking for anonymous recipient encryption"
+
+# Use --no-default-keyring to prevent GPG from trying keys (which would trigger Yubikey PIN)
+# This way we only examine the packet structure without attempting decryption
+# Note: This command will return non-zero (can't decrypt), but that's OK - we only need the packet structure
+PACKETS=$(gpg --no-default-keyring --keyring /dev/null --list-packets "$FILE" 2>&1) || PACKETS_EXIT=$?
+PACKETS_EXIT=${PACKETS_EXIT:-0}
+
+log_debug "GPG list-packets exit code: $PACKETS_EXIT"
+log_debug "Packet output length: ${#PACKETS} bytes"
+
+# Check if we got any output (we expect output even if gpg returned non-zero)
+if [ -z "$PACKETS" ]; then
+    log_error "Failed to read GPG packet data from file (exit code: $PACKETS_EXIT)"
+    notify-send -i dialog-error "Decryption Failed" \
+        "Unable to read encryption data from file.\nThe file may be corrupted."
+    exit 1
+fi
+
+log_debug "Packet data (first 500 chars): ${PACKETS:0:500}"
+
+IS_ANONYMOUS=false
+if echo "$PACKETS" | grep -q "keyid 0000000000000000"; then
+    IS_ANONYMOUS=true
+    log_info "Detected anonymous recipient encryption"
+fi
+
+# If anonymous, prompt user to select which key to try
+TRY_KEY_ARGS=()
+if [ "$IS_ANONYMOUS" = true ]; then
+    log_debug "Prompting for key selection"
+
+    # Get list of secret keys using shared function
+    if ! SECRET_KEYS=$(list_secret_keys); then
+        log_error "Failed to retrieve secret keys"
+        notify-send -i dialog-error "Decryption Failed" "Unable to access GPG keyring."
+        exit 1
+    fi
+
+    if [ -z "$SECRET_KEYS" ]; then
+        log_error "No secret keys found for anonymous decryption"
+        notify-send -i dialog-error "Decryption Failed" "No secret keys available for decryption."
+        exit 1
+    fi
+
+    # Build zenity list for key selection and store full keyid mapping
+    declare -A KEYID_MAP  # short_id -> full_keyid
+    ZENITY_LIST=()
+
+    while IFS=$'\t' read -r keyid uid; do
+        short_id=${keyid: -8}
+        KEYID_MAP["$short_id"]="$keyid"
+        ZENITY_LIST+=("FALSE" "$short_id" "$uid")
+    done <<< "$SECRET_KEYS"
+
+    if [ ${#ZENITY_LIST[@]} -eq 0 ]; then
+        log_error "No keys available for selection"
+        notify-send -i dialog-error "Decryption Failed" "No secret keys available for decryption."
+        exit 1
+    fi
+
+    # Prompt user to select key(s)
+    SELECTED=$(zenity --list --checklist \
+        --title="Select Decryption Key" \
+        --text="This file uses anonymous encryption.\nSelect which key(s) to try for decryption:\n\nNote: GPG may try other keys if the selected ones fail." \
+        --column="Try" --column="Key ID" --column="Name" \
+        --width=600 --height=400 \
+        --window-icon=dialog-password \
+        "${ZENITY_LIST[@]}") || exit 0
+
+    if [ -z "$SELECTED" ]; then
+        log_info "No keys selected for decryption"
+        exit 0
+    fi
+
+    # Convert selected short IDs back to full key IDs and build --try-secret-key args
+    while IFS='|' read -ra SELECTED_IDS; do
+        for short_id in "${SELECTED_IDS[@]}"; do
+            full_keyid="${KEYID_MAP[$short_id]}"
+            if [ -n "$full_keyid" ]; then
+                TRY_KEY_ARGS+=(--try-secret-key "$full_keyid")
+                log_debug "Will try key: $full_keyid"
+            else
+                log_error "Could not find full key ID for short ID: $short_id"
+            fi
+        done
+    done <<< "$SELECTED"
+fi
+
 log_info "Executing GPG decryption"
 
-# Decrypt and capture status output (using fd 3 to separate status from stderr)
-STATUS=$(gpg --batch --yes --status-fd 3 --decrypt --output "$OUTFILE" "$FILE" 2>&1 3>&1 1>&2)
-GPG_EXIT=$?
+# If we have specific keys selected (anonymous encryption), use them as hints to GPG
+# Note: GPG may still try other keys due to hardware key limitations, but selected keys are prioritized
+if [ ${#TRY_KEY_ARGS[@]} -gt 0 ]; then
+    log_debug "Attempting decryption with selected keys"
 
-log_debug "GPG exit code: $GPG_EXIT"
-log_debug "GPG status output: $STATUS"
+    # Try decryption with selected keys (GPG will prioritize these but may try others)
+    STATUS=$(gpg --batch --yes --status-fd 3 "${TRY_KEY_ARGS[@]}" --decrypt --output "$OUTFILE" "$FILE" 2>&1 3>&1 1>&2)
+    GPG_EXIT=$?
 
-if [ $GPG_EXIT -ne 0 ]; then
-    log_error "Decryption failed with exit code $GPG_EXIT"
-    notify-send -i dialog-error "Decryption Failed" "Failed to decrypt ${FILENAME}"
-    exit 1
+    log_debug "GPG exit code: $GPG_EXIT"
+
+    if [ $GPG_EXIT -ne 0 ]; then
+        log_error "Decryption failed with exit code $GPG_EXIT"
+        notify-send -i dialog-error "Decryption Failed" "Failed to decrypt ${FILENAME}\n\nNone of the selected keys could decrypt this file."
+        exit 1
+    fi
+
+    log_info "Decryption successful"
+else
+    # Normal decryption (non-anonymous)
+    STATUS=$(gpg --batch --yes --status-fd 3 --decrypt --output "$OUTFILE" "$FILE" 2>&1 3>&1 1>&2)
+    GPG_EXIT=$?
+
+    log_debug "GPG exit code: $GPG_EXIT"
+    log_debug "GPG status output: $STATUS"
+
+    if [ $GPG_EXIT -ne 0 ]; then
+        log_error "Decryption failed with exit code $GPG_EXIT"
+        notify-send -i dialog-error "Decryption Failed" "Failed to decrypt ${FILENAME}"
+        exit 1
+    fi
 fi
 
 log_info "Decryption successful"
