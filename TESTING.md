@@ -23,16 +23,16 @@ All automated checks passed:
 
 ```bash
 cd /home/john/gitlocal/nemo-crypt
-sudo dpkg -i ../nemo-crypt_0.1.0-1_all.deb
+sudo dpkg -i ../nemo-crypt_0.2.0-1_all.deb
 ```
 
 **Expected output:**
 ```
 Selecting previously unselected package nemo-crypt.
 (Reading database ... XX files and directories currently installed.)
-Preparing to unpack .../nemo-crypt_0.1.0-1_all.deb ...
-Unpacking nemo-crypt (0.1.0-1) ...
-Setting up nemo-crypt (0.1.0-1) ...
+Preparing to unpack .../nemo-crypt_0.2.0-1_all.deb ...
+Unpacking nemo-crypt (0.2.0-1) ...
+Setting up nemo-crypt (0.2.0-1) ...
 ```
 
 ### 2. Verify Installation
@@ -191,7 +191,7 @@ sudo dpkg -r nemo-crypt
 **Expected output:**
 ```
 (Reading database ... XX files and directories currently installed.)
-Removing nemo-crypt (0.1.0-1) ...
+Removing nemo-crypt (0.2.0-1) ...
 ```
 
 ### 2. Verify Clean Removal

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/0.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-15
+
+### Added
+- Anonymous recipient encryption option (--throw-keyids) via checkbox in encryption dialog
+- Automatic detection of anonymous recipient encryption during decryption
+- Interactive key selection dialog for anonymous encrypted files
+- Shared GPG key listing functions in gpg-common.sh (list_secret_keys, list_public_keys)
+- Comprehensive debug logging system with NEMO_CRYPT_DEBUG environment variable
+- Debug log file at ~/.cache/nemo-crypt/debug.log
+- Logging functions: log_debug(), log_info(), log_error()
+
+### Changed
+- Anonymous recipient checkbox automatically disabled when symmetric mode is selected
+- Improved error messages for decryption failures with specific context
+- Enhanced validation of dialog output (MODE and ANONYMOUS values)
+
+### Fixed
+- Word splitting vulnerability in key selection parsing (now uses associative arrays)
+- Unsafe grep pattern matching on key IDs (replaced with exact mapping)
+- Missing error handling for gpg --list-packets failures
+- Shell scripting anti-patterns in key parsing logic
+
+### Security
+- Fixed shell scripting vulnerabilities in GPG key ID parsing
+- Added validation to prevent malformed dialog output
+- Improved robustness of key selection with exact ID matching
+
 ## [0.1.0] - 2026-02-14
 
 ### Added
@@ -86,7 +113,7 @@ sudo ./install.sh          # System-wide
 **Debian Package:**
 ```bash
 dpkg-buildpackage -us -uc
-sudo dpkg -i ../nemo-crypt_0.1.0-1_all.deb
+sudo dpkg -i ../nemo-crypt_0.2.0-1_all.deb
 ```
 
 For detailed usage instructions, see the README.md file.

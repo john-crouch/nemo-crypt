@@ -57,9 +57,9 @@ This document tracks the completion status of all requirements for submitting ne
    - [ ] Update copyright year if needed
 
 2. **Version management**:
-   - [x] Version set to 0.1.0
-   - [ ] Update version in install.sh if changed
-   - [ ] Update version in man pages if changed
+   - [x] Version set to 0.2.0
+   - [x] Update version in install.sh if changed
+   - [x] Update version in man pages if changed
 
 3. **Final testing**:
    - [ ] Run test suite: `./tests/run-tests.sh`
@@ -77,17 +77,17 @@ sudo apt-get install debhelper dh-make
 dpkg-buildpackage -us -uc
 
 # Check the package
-lintian ../nemo-crypt_0.1.0-1_all.deb
+lintian ../nemo-crypt_0.2.0-1_all.deb
 
 # Install and test
-sudo dpkg -i ../nemo-crypt_0.1.0-1_all.deb
+sudo dpkg -i ../nemo-crypt_0.2.0-1_all.deb
 ```
 
 ### Linting
 
 ```bash
 # Check with lintian (Debian package validator)
-lintian ../nemo-crypt_0.1.0-1_all.deb
+lintian ../nemo-crypt_0.2.0-1_all.deb
 
 # Check shell scripts (if shellcheck available)
 shellcheck gpg-*.sh install.sh

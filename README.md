@@ -23,7 +23,16 @@ GPG encryption and decryption integration for the Nemo file manager, providing s
 
 ## Screenshots
 
-*(Add screenshots here showing the context menu and encryption dialog)*
+### Encryption Settings Dialog
+![Encryption settings with recipient selection](screenshots/screenshot_1.png)
+
+### Right-click Context Menus
+| Encrypt | Decrypt |
+|---------|---------|
+| ![Nemo context menu showing Encrypt option](screenshots/screenshot_3.png) | ![Nemo context menu showing Decrypt option](screenshots/screenshot_4.png) |
+
+### Notification Example
+![Decryption notification with signature verification](screenshots/screenshot_2.png)
 
 ## Requirements
 
@@ -79,10 +88,24 @@ nemo -q
 
 ### Debian/Ubuntu Package
 
+**Download from GitHub Releases:**
 ```bash
-# Install from .deb package
-sudo dpkg -i nemo-crypt_0.1.0_all.deb
+# Download the latest release
+wget https://github.com/john-crouch/nemo-crypt/releases/download/v0.2.0/nemo-crypt_0.2.0-1_all.deb
+
+# Verify checksum (optional)
+wget https://github.com/john-crouch/nemo-crypt/releases/download/v0.2.0/nemo-crypt_0.2.0-1_all.deb.sha256
+sha256sum -c nemo-crypt_0.2.0-1_all.deb.sha256
+
+# Install
+sudo dpkg -i nemo-crypt_0.2.0-1_all.deb
 sudo apt-get install -f  # Install dependencies if needed
+```
+
+**Or build locally:**
+```bash
+dpkg-buildpackage -us -uc
+sudo dpkg -i ../nemo-crypt_0.2.0-1_all.deb
 ```
 
 ## Usage

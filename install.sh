@@ -3,7 +3,7 @@ set -euo pipefail
 
 # nemo-crypt installation script
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Default installation directories
