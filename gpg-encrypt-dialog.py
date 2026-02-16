@@ -21,6 +21,7 @@ Outputs selections on stdout for the calling script to parse:
     MODE=symmetric|recipients
     RECIPIENTS=keyid1,keyid2,...
     SIGNER=keyid|none
+    ANONYMOUS=true|false
 Exits 0 on OK, 1 on Cancel.
 """
 
@@ -180,6 +181,16 @@ class EncryptDialog(Gtk.Dialog):
 
         content.pack_start(self.recipient_box, True, True, 0)
 
+        # ── Anonymous recipient checkbox ──
+        self.anonymous_check = Gtk.CheckButton.new_with_label(
+            "Hide recipient (anonymous encryption)"
+        )
+        self.anonymous_check.set_tooltip_text(
+            "Encrypts without revealing which key was used. "
+            "Requires trying all secret keys during decryption."
+        )
+        content.pack_start(self.anonymous_check, False, False, 0)
+
         # ── Sign message as ──
         sign_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         sign_label = Gtk.Label(label="Sign message as:")
@@ -199,6 +210,9 @@ class EncryptDialog(Gtk.Dialog):
     def _on_mode_toggled(self, widget):
         use_recipients = self.radio_recipients.get_active()
         self.recipient_box.set_sensitive(use_recipients)
+        self.anonymous_check.set_sensitive(use_recipients)
+        if not use_recipients:
+            self.anonymous_check.set_active(False)
 
     def _on_filter_changed(self, widget):
         self.key_filter.refilter()
@@ -229,7 +243,7 @@ class EncryptDialog(Gtk.Dialog):
             self.key_store[store_path][0] = not self.key_store[store_path][0]
 
     def get_results(self):
-        """Return (mode, recipients_list, signer_keyid)."""
+        """Return (mode, recipients_list, signer_keyid, anonymous)."""
         if self.radio_passphrase.get_active():
             mode = "symmetric"
         else:
@@ -241,8 +255,9 @@ class EncryptDialog(Gtk.Dialog):
                 recipients.append(row[3])  # full keyid
 
         signer = self.sign_combo.get_active_id()
+        anonymous = self.anonymous_check.get_active()
 
-        return mode, recipients, signer
+        return mode, recipients, signer, anonymous
 
 
 def main():
@@ -275,7 +290,7 @@ def main():
     if response != Gtk.ResponseType.OK:
         return 1
 
-    mode, recipients, signer = dialog.get_results()
+    mode, recipients, signer, anonymous = dialog.get_results()
 
     if mode == "recipients" and not recipients:
         md = Gtk.MessageDialog(
@@ -290,6 +305,7 @@ def main():
     print(f"MODE={mode}", flush=True)
     print(f"RECIPIENTS={','.join(recipients)}", flush=True)
     print(f"SIGNER={signer}", flush=True)
+    print(f"ANONYMOUS={'true' if anonymous else 'false'}", flush=True)
     return 0
 
 

@@ -131,7 +131,7 @@ fi
 log_debug "Dialog output: $DIALOG_OUTPUT"
 
 # Validate dialog output format
-if [[ ! "$DIALOG_OUTPUT" =~ ^MODE= ]] || [[ ! "$DIALOG_OUTPUT" =~ RECIPIENTS= ]] || [[ ! "$DIALOG_OUTPUT" =~ SIGNER= ]]; then
+if [[ ! "$DIALOG_OUTPUT" =~ ^MODE= ]] || [[ ! "$DIALOG_OUTPUT" =~ RECIPIENTS= ]] || [[ ! "$DIALOG_OUTPUT" =~ SIGNER= ]] || [[ ! "$DIALOG_OUTPUT" =~ ANONYMOUS= ]]; then
     log_error "Dialog returned invalid output format"
     notify-send -i dialog-error "Encrypt" "Encryption dialog returned invalid data.\n\nPlease try again."
     exit 1
@@ -140,10 +140,25 @@ fi
 ENC_MODE=$(echo "$DIALOG_OUTPUT" | grep '^MODE=' | cut -d= -f2)
 RECIPIENTS=$(echo "$DIALOG_OUTPUT" | grep '^RECIPIENTS=' | cut -d= -f2)
 SIGNER=$(echo "$DIALOG_OUTPUT" | grep '^SIGNER=' | cut -d= -f2)
+ANONYMOUS=$(echo "$DIALOG_OUTPUT" | grep '^ANONYMOUS=' | cut -d= -f2)
 
 log_info "Encryption mode: $ENC_MODE"
 log_debug "Recipients: $RECIPIENTS"
 log_debug "Signer: $SIGNER"
+log_debug "Anonymous: $ANONYMOUS"
+
+# Validate parsed values
+if [[ ! "$ENC_MODE" =~ ^(symmetric|recipients)$ ]]; then
+    log_error "Invalid encryption mode: $ENC_MODE"
+    notify-send -i dialog-error "Encrypt" "Encryption dialog returned invalid mode.\n\nPlease try again."
+    exit 1
+fi
+
+if [[ ! "$ANONYMOUS" =~ ^(true|false)$ ]]; then
+    log_error "Invalid ANONYMOUS value: $ANONYMOUS"
+    notify-send -i dialog-error "Encrypt" "Encryption dialog returned invalid anonymous setting.\n\nPlease try again."
+    exit 1
+fi
 
 # Build recipient args
 RCPT_ARGS=()
@@ -226,6 +241,16 @@ for i in "${!FILES[@]}"; do
 
     GPG_CMD=(gpg --yes --output "$OUTFILE")
 
+    # Handle --throw-keyids for anonymous recipient encryption
+    if [ "$ENC_MODE" = "recipients" ]; then
+        if [ "$ANONYMOUS" = "true" ]; then
+            GPG_CMD+=(--throw-keyids)
+        else
+            # Explicitly disable throw-keyids in case user has it in gpg.conf
+            GPG_CMD+=(--no-throw-keyids)
+        fi
+    fi
+
     if [ "$ENC_MODE" = "symmetric" ]; then
         GPG_CMD+=(--symmetric "${SIGN_ARGS[@]}")
     else
@@ -240,7 +265,18 @@ for i in "${!FILES[@]}"; do
     else
         log_error "Failed to encrypt $(basename "$FILE"): $ERROR"
         ((FAILED++)) || true
-        FAIL_NAMES+="\n$(basename "$FILE"): ${ERROR:0:100}"
+
+        # Extract a clean reason from the error
+        if echo "$ERROR" | grep -qi "cancel\|abort"; then
+            REASON="Operation cancelled"
+        elif echo "$ERROR" | grep -qi "no such file"; then
+            REASON="File not found"
+        elif echo "$ERROR" | grep -qi "permission denied"; then
+            REASON="Permission denied"
+        else
+            REASON="Encryption failed"
+        fi
+        FAIL_NAMES+="\n$(basename "$FILE"): $REASON"
         rm -f "$OUTFILE"
     fi
 done
@@ -273,9 +309,16 @@ if [ $FAILED -eq 0 ]; then
     fi
 
     if [ ${#SIGN_ARGS[@]} -gt 0 ]; then
-        BODY+="\nSigned: Yes"
+        # Get the user ID for the signer key
+        SIGNER_NAME=$(gpg --list-keys --with-colons "$SIGNER" 2>/dev/null | awk -F: '/^uid:/ {print $10; exit}')
+        if [ -n "$SIGNER_NAME" ]; then
+            BODY+="\nSigned by: $SIGNER_NAME"
+        else
+            BODY+="\nSigned by: $SIGNER"
+        fi
     fi
 
+    
     notify-send -i dialog-password -u normal -t 5000 "$TITLE" "$BODY"
 else
     if [ $SUCCEEDED -eq 1 ]; then
