@@ -1,0 +1,182 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read  # Explicitly read-only
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true  # Cancel old PR builds
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-22.04  # Jammy (Linux Mint 21)
+          - ubuntu-24.04  # Noble (Linux Mint 22 when released)
+        include:
+          - os: ubuntu-22.04
+            gtk-version: "3.24"
+            python-version: "3.10"
+          - os: ubuntu-24.04
+            gtk-version: "3.24"
+            python-version: "3.12"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Cache apt packages
+        uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-${{ matrix.os }}-apt-test-${{ hashFiles('.github/workflows/test.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.os }}-apt-test-
+            ${{ runner.os }}-${{ matrix.os }}-apt-
+
+      - name: Install dependencies
+        run: |
+          # Retry apt-get update up to 3 times
+          for i in 1 2 3; do
+            sudo apt-get update && break
+            echo "apt-get update failed, retrying ($i/3)..."
+            sleep 5
+          done
+
+          sudo apt-get install -y \
+            gnupg \
+            python3 \
+            python3-gi \
+            gir1.2-gtk-3.0 \
+            zenity \
+            libnotify-bin \
+            zip
+
+      - name: Verify GTK version
+        run: |
+          python3 -c "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; print(f'GTK {Gtk.MAJOR_VERSION}.{Gtk.MINOR_VERSION}.{Gtk.MICRO_VERSION}')"
+
+      - name: Make scripts executable
+        run: |
+          chmod +x gpg-encrypt.sh gpg-decrypt-verify.sh gpg-encrypt-dialog.py
+          chmod +x tests/run-tests.sh
+
+      - name: Run test suite
+        run: |
+          cd tests
+          ./run-tests.sh
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Install shellcheck
+        run: |
+          # Retry apt-get update up to 3 times
+          for i in 1 2 3; do
+            sudo apt-get update && break
+            echo "apt-get update failed, retrying ($i/3)..."
+            sleep 5
+          done
+          sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts with shellcheck
+        run: |
+          # Fail on errors and warnings
+          shellcheck --severity=warning gpg-encrypt.sh gpg-decrypt-verify.sh gpg-common.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: '3.x'
+
+      - name: Check Python syntax
+        run: |
+          python3 -m py_compile gpg-encrypt-dialog.py
+
+      - name: Install Python linting tools
+        run: |
+          pip install --user ruff black
+
+      - name: Lint Python code with ruff
+        run: |
+          ruff check gpg-encrypt-dialog.py || true  # Don't fail on ruff yet
+
+      - name: Check Python formatting with black
+        run: |
+          black --check --diff gpg-encrypt-dialog.py || true  # Don't fail on formatting yet
+
+  build-test:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-22.04
+          - ubuntu-24.04
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Cache apt packages
+        uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-${{ matrix.os }}-apt-build-${{ hashFiles('.github/workflows/test.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.os }}-apt-build-
+            ${{ runner.os }}-${{ matrix.os }}-apt-
+
+      - name: Install build dependencies
+        run: |
+          # Retry apt-get update up to 3 times
+          for i in 1 2 3; do
+            sudo apt-get update && break
+            echo "apt-get update failed, retrying ($i/3)..."
+            sleep 5
+          done
+
+          sudo apt-get install -y \
+            debhelper \
+            devscripts \
+            lintian
+
+      - name: Test build Debian package
+        run: |
+          dpkg-buildpackage -us -uc -b
+          ls -lh ../
+
+      - name: Run lintian
+        run: |
+          # Fail on errors, allow warnings/info
+          lintian --fail-on error --suppress-tags new-package-should-close-itp-bug \
+            ../nemo-crypt_*.deb
+
+          # Full output for review
+          echo "=== Full Lintian Report ==="
+          lintian --no-tag-display-limit ../nemo-crypt_*.deb || true
+
+      - name: Upload test package
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        with:
+          name: test-debian-package-${{ matrix.os }}
+          path: ../nemo-crypt_*.deb
+          retention-days: 7

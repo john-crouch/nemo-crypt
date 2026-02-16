@@ -1,0 +1,16 @@
+# CODEOWNERS file for nemo-crypt
+# These owners will be requested for review when someone opens a pull request
+
+# Require review for workflow changes
+/.github/workflows/ @john-crouch
+
+# Require review for Debian packaging
+/debian/ @john-crouch
+
+# Core scripts
+*.sh @john-crouch
+*.py @john-crouch
+
+# Documentation
+*.md @john-crouch
+/man/ @john-crouch

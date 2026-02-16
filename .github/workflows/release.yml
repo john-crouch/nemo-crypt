@@ -1,0 +1,195 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v0.2.0
+
+# Remove workflow-level permissions - set at job level for better security
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel releases
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Only for release creation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Cache apt packages
+        uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-apt-build-${{ hashFiles('.github/workflows/release.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-build-
+            ${{ runner.os }}-apt-
+
+      - name: Install build dependencies
+        run: |
+          # Retry apt-get update up to 3 times
+          for i in 1 2 3; do
+            sudo apt-get update && break
+            echo "apt-get update failed, retrying ($i/3)..."
+            sleep 5
+          done
+
+          sudo apt-get install -y \
+            debhelper \
+            dh-make \
+            devscripts \
+            lintian \
+            gnupg \
+            python3 \
+            python3-gi \
+            gir1.2-gtk-3.0 \
+            zenity \
+            libnotify-bin
+
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Verify debian/changelog version matches tag
+        run: |
+          CHANGELOG_VERSION=$(head -n1 debian/changelog | sed 's/.*(\(.*\)).*/\1/' | cut -d'-' -f1)
+          TAG_VERSION=${{ steps.get_version.outputs.version }}
+          if [ "$CHANGELOG_VERSION" != "$TAG_VERSION" ]; then
+            echo "ERROR: Version mismatch!"
+            echo "debian/changelog version: $CHANGELOG_VERSION"
+            echo "Git tag version: $TAG_VERSION"
+            exit 1
+          fi
+          echo "Version check passed: $TAG_VERSION"
+
+      - name: Build Debian package
+        run: |
+          # -us: Don't sign source package
+          # -uc: Don't sign .changes file
+          # -b: Binary-only build (no source package)
+          dpkg-buildpackage -us -uc -b
+          ls -lh ../
+
+      - name: Run lintian checks
+        run: |
+          # Fail on errors, allow warnings/info
+          lintian --fail-on error --suppress-tags new-package-should-close-itp-bug \
+            ../nemo-crypt_*.deb
+
+          # Full output for review (won't fail build)
+          echo "=== Full Lintian Report ==="
+          lintian --no-tag-display-limit ../nemo-crypt_*.deb || true
+
+      - name: Prepare release artifacts
+        id: prepare_artifacts
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          DEB_FILE=$(ls ../nemo-crypt_*.deb)
+          echo "deb_file=$DEB_FILE" >> $GITHUB_OUTPUT
+          echo "deb_name=$(basename $DEB_FILE)" >> $GITHUB_OUTPUT
+
+          # Generate checksums
+          cd ..
+          sha256sum $(basename $DEB_FILE) > $(basename $DEB_FILE).sha256
+          echo "checksum_file=$(basename $DEB_FILE).sha256" >> $GITHUB_OUTPUT
+
+      - name: Verify artifacts exist
+        run: |
+          DEB_FILE="${{ steps.prepare_artifacts.outputs.deb_file }}"
+          CHECKSUM_FILE="../${{ steps.prepare_artifacts.outputs.checksum_file }}"
+
+          if [ ! -f "$DEB_FILE" ]; then
+            echo "ERROR: .deb file not found: $DEB_FILE"
+            exit 1
+          fi
+
+          if [ ! -f "$CHECKSUM_FILE" ]; then
+            echo "ERROR: Checksum file not found: $CHECKSUM_FILE"
+            exit 1
+          fi
+
+          # Verify .deb file can be extracted
+          dpkg-deb --info "$DEB_FILE"
+
+          echo "Artifacts validated successfully"
+
+      - name: Validate checksum
+        run: |
+          cd ..
+          sha256sum -c ${{ steps.prepare_artifacts.outputs.checksum_file }}
+
+      - name: Generate release notes with installation instructions
+        id: changelog
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+
+          # Create release notes with installation instructions
+          cat > release_notes.md << 'EOF'
+          ## Installation
+
+          Download the `.deb` package and install:
+
+          ```bash
+          wget https://github.com/${{ github.repository }}/releases/download/v${VERSION}/nemo-crypt_${VERSION}-1_all.deb
+          wget https://github.com/${{ github.repository }}/releases/download/v${VERSION}/nemo-crypt_${VERSION}-1_all.deb.sha256
+          sha256sum -c nemo-crypt_${VERSION}-1_all.deb.sha256
+          sudo dpkg -i nemo-crypt_${VERSION}-1_all.deb
+          sudo apt-get install -f  # Install any missing dependencies
+          ```
+
+          ## Changes
+
+          EOF
+
+          # Extract changelog entry for this version from CHANGELOG.md
+          if [ -f CHANGELOG.md ]; then
+            awk "/## \[$VERSION\]/,/## \[/" CHANGELOG.md | head -n -1 >> release_notes.md
+          fi
+
+          # If CHANGELOG.md doesn't have entry, use debian/changelog
+          if [ ! -s release_notes.md ] || ! grep -q "^## Changes" release_notes.md; then
+            echo "## Release Notes" > release_notes.md
+            echo "" >> release_notes.md
+            dpkg-parsechangelog --show-field Changes >> release_notes.md
+          fi
+
+          # Validate release notes are not empty
+          if [ ! -s release_notes.md ]; then
+            echo "ERROR: Release notes are empty!"
+            exit 1
+          fi
+
+          echo "=== Release Notes Preview ==="
+          cat release_notes.md
+          echo "==========================="
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # v2.0.5
+        with:
+          files: |
+            ${{ steps.prepare_artifacts.outputs.deb_file }}
+            ../${{ steps.prepare_artifacts.outputs.checksum_file }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+          name: "Release v${{ steps.get_version.outputs.version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        with:
+          name: debian-package
+          path: |
+            ${{ steps.prepare_artifacts.outputs.deb_file }}
+            ../${{ steps.prepare_artifacts.outputs.checksum_file }}
+          retention-days: 90
