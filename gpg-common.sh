@@ -70,3 +70,44 @@ check_dependencies() {
         exit 1
     fi
 }
+
+# ─── GPG Key Listing ────────────────────────────────────────────────
+
+# List secret keys in "keyid uid" format (tab-separated)
+# Returns: 0 on success, 1 on error
+# Output: One line per key: "KEYID<TAB>UID"
+list_secret_keys() {
+    local output
+    # Use --fast-list to avoid touching smartcards/Yubikeys during listing
+    # This prevents PIN prompts when just building the key selection dialog
+    if ! output=$(gpg --list-secret-keys --with-colons --fast-list 2>/dev/null); then
+        log_error "Failed to list secret keys"
+        return 1
+    fi
+
+    # Parse GPG output: save keyid when we see sec:, print when we see uid:
+    echo "$output" | awk -F: '
+        /^sec:/ { keyid=$5 }
+        /^uid:/ && keyid { print keyid "\t" $10; keyid="" }
+    '
+    return 0
+}
+
+# List public keys in "keyid uid" format (tab-separated)
+# Returns: 0 on success, 1 on error
+# Output: One line per key: "KEYID<TAB>UID"
+list_public_keys() {
+    local output
+    # Use --fast-list to avoid touching smartcards/Yubikeys during listing
+    if ! output=$(gpg --list-keys --with-colons --fast-list 2>/dev/null); then
+        log_error "Failed to list public keys"
+        return 1
+    fi
+
+    # Parse GPG output: save keyid when we see pub:, print when we see uid:
+    echo "$output" | awk -F: '
+        /^pub:/ { keyid=$5 }
+        /^uid:/ && keyid { print keyid "\t" $10; keyid="" }
+    '
+    return 0
+}
