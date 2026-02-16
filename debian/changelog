@@ -1,3 +1,16 @@
+nemo-crypt (0.2.0-1) unstable; urgency=medium
+
+  * Add anonymous recipient encryption option (--throw-keyids)
+  * Add key selection dialog for anonymous encrypted files
+  * Add comprehensive debug logging system (NEMO_CRYPT_DEBUG)
+  * Extract shared GPG key listing functions to gpg-common.sh
+  * Improve error handling and validation throughout
+  * Fix shell scripting vulnerabilities in key parsing
+  * Disable anonymous checkbox appropriately in symmetric mode
+  * Add better error messages for decryption failures
+
+ -- John Crouch <github@ko4dfo.com>  Sun, 15 Feb 2026 00:00:00 +0000
+
 nemo-crypt (0.1.0-1) unstable; urgency=medium
 
   * Initial release
