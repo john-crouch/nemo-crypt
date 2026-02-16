@@ -155,6 +155,7 @@ jobs:
           done
 
           sudo apt-get install -y \
+            build-essential \
             debhelper \
             devscripts \
             lintian

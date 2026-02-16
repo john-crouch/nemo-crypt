@@ -20,15 +20,15 @@ TESTS_FAILED=0
 # Test result tracking
 test_pass() {
     echo -e "${GREEN}✓${NC} $1"
-    ((TESTS_PASSED++))
-    ((TESTS_RUN++))
+    ((TESTS_PASSED++)) || true
+    ((TESTS_RUN++)) || true
 }
 
 test_fail() {
     echo -e "${RED}✗${NC} $1"
     echo "  Error: $2"
-    ((TESTS_FAILED++))
-    ((TESTS_RUN++))
+    ((TESTS_FAILED++)) || true
+    ((TESTS_RUN++)) || true
 }
 
 test_skip() {
